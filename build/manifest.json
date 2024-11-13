@@ -19,5 +19,5 @@
       "128": "icons/icon16.png"
     }
   },
-  "permissions": ["contextMenus", "activeTab", "tabs", "scripting"]
+  "permissions": ["contextMenus", "activeTab", "tabs", "scripting","tabCapture"]
 }
