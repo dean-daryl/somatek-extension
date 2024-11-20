@@ -1,70 +1,73 @@
-import { useState } from "react";
-import Slider from "rc-slider";
-import "rc-slider/assets/index.css";
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Button } from '../components/ui/button'
+import { Clock } from 'lucide-react';
+import { TimeRangeSlider } from './TimeRangeSlider';
 
-export const TimestampModal: React.FC<{
+interface TimestampModalProps {
   onConfirm: (start: number, end: number) => void;
   onClose: () => void;
   videoDuration: number;
-}> = ({ onConfirm, onClose, videoDuration }) => {
-  const [range, setRange] = useState<[number, number]>([0, 0]);
-  
-  const handleConfirm = () => {
-    const [start, end] = range;
-    if (end > start) {
-      onConfirm(start, end);
-      onClose();
-    } else {
-      alert("End time must be greater than start time");
-    }
-  };
-  const formatTimestamp = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
+}
+
+export const TimestampModal = ({ onConfirm, onClose, videoDuration }: TimestampModalProps) => {
+  const [range, setRange] = useState([0, videoDuration]);
+
+  useEffect(() => {
+    setRange([0, videoDuration]);
+  }, [videoDuration]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-      <div className="bg-white p-4 rounded-lg flex flex-col items-center w-[500px]">
-        <h2 className="text-lg font-bold mb-4">Set Timestamps:</h2>
-
-        {/* Dual-handle slider */}
-        <Slider
-          range
-          min={0}
-          max={videoDuration}
-          step={0.1}
-          value={range}
-          onChange={(newRange) => setRange(newRange as [number, number])}
-          trackStyle={[{ backgroundColor: "blue" }]}
-          handleStyle={[
-            { backgroundColor: "blue", borderColor: "blue" },
-            { backgroundColor: "blue", borderColor: "blue" },
-          ]}
-        />
-
-        <div className="flex justify-between w-full mt-2">
-          <span>Start: {formatTimestamp(range[0])}</span>
-          <span>End: {formatTimestamp(range[1])}</span>
+    <Dialog open={true} onOpenChange={() => onClose()}>
+      <DialogContent className="sm:max-w-md  bg-white w-[90%]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            Select Video Segment
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-6">
+          <div className="space-y-8">
+            <div className="px-2">
+              <TimeRangeSlider
+                min={0}
+                max={videoDuration}
+                step={1}
+                value={range}
+                onValueChange={setRange}
+              />
+            </div>
+            <div className="flex justify-between items-center">
+              <div className="flex flex-col items-center">
+                <span className="text-sm font-medium">Start</span>
+                <span className="text-sm text-muted-foreground">{formatTime(range[0])}</span>
+              </div>
+              <div className="h-px flex-1 mx-4 bg-border" />
+              <div className="flex flex-col items-center">
+                <span className="text-sm font-medium">End</span>
+                <span className="text-sm text-muted-foreground">{formatTime(range[1])}</span>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className="mt-6 flex justify-between w-full">
-          <button
-            onClick={handleConfirm}
-            className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
-          >
-            Confirm
-          </button>
-
-          <button
-            onClick={onClose}
-            className="bg-red-500 text-white px-4 py-2 rounded"
-          >
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
+          <Button onClick={() => {
+            onConfirm(range[0], range[1])
+            onClose()
+           }}>
+            Transcribe Segment
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
