@@ -65,22 +65,27 @@ const App: React.FC = () => {
               });
               const response = chatCompletion.choices[0].message.content as string;
               setResultSimple(markdownToPlainText(response));
-              (async() => { await fetch(`http://localhost:8080/technology?text=${encodeURIComponent(response)}`, {method: 'POST'}) })()
+              (async() => {
+                 await fetch(`http://localhost:8080/technology?text=${encodeURIComponent(response)}`, {method: 'POST'})
+
+                 await fetch(`http://localhost:8080/recent-activity`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    "title":`${encodeURIComponent(response)}`
+                  },
+                  body: JSON.stringify({
+                    userId: "2ec00c00-3d0a-4124-9060-69847a6287ca", 
+                    requestType:"IMAGE",
+                    conversation: {
+                      "prompt 1": message.url, 
+                      "response 1": response, 
+                    }
+                  })
+        });
+                })()
               
-              await fetch(`http://localhost:8080/recent-activity`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  "title":`${response}`
-                },
-                body: JSON.stringify({
-                  userId: "2ec00c00-3d0a-4124-9060-69847a6287ca", 
-                  conversation: {
-                    "prompt 1": message.url, 
-                    "response 1": response, 
-                  }
-                })
-              });
+             
             } catch (error) {
               console.error("Error:", error);
             }
@@ -133,19 +138,22 @@ const App: React.FC = () => {
         await fetch(`http://localhost:8080/technology?text=${encodeURIComponent(text)}`, {
           method: 'POST',
         });
-        await fetch(`http://localhost:8080/recent-activity`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: "2ec00c00-3d0a-4124-9060-69847a6287ca", 
-            conversation: {
-              "prompt 1": text, 
-              "response 1": response, 
-            }
-          })
-        });
+
+          await fetch(`http://localhost:8080/recent-activity`, {
+           method: 'POST',
+           headers: {
+             'Content-Type': 'application/json',
+             "title":`${encodeURIComponent(text)}`
+           },
+           body: JSON.stringify({
+             userId: "2ec00c00-3d0a-4124-9060-69847a6287ca", 
+             requestType:"TEXT",
+             conversation: {
+               "prompt 1": text, 
+               "response 1": response, 
+             }
+           })
+ });
       } catch (error) {
         console.error("Error:", error);
       } finally {
@@ -315,6 +323,7 @@ const App: React.FC = () => {
                 },
                 body: JSON.stringify({
                   userId: "2ec00c00-3d0a-4124-9060-69847a6287ca", 
+                  requestType:"VIDEO",
                   conversation: {
                     "prompt 1": `<iframe 
                                   src="https://www.youtube.com/embed/${videoId}"
