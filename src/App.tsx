@@ -13,14 +13,70 @@ const App: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
 
+  const [_imagePath, setImagePath] = useState("")
+
+
   const GROK_API_KEY = process.env.REACT_APP_GROQ_API_KEY;
 
   const groq = new Groq({
     apiKey: GROK_API_KEY,
     dangerouslyAllowBrowser: true,
   });
-
+  const markdownToPlainText = (text: string): string => {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '$1') // Remove ** for bold text
+      .replace(/^\s*\*\s+/gm, '- ')    // Replace markdown bullets (*) with dashes (-)
+      .replace(/(\s*- )/g, '\n$1')     // Add a newline before lines starting with a dash
+      .replace(/(\n|^)(\d+\.\s)/g, '\n$2'); // Add a newline before numbered points
+  };
+  
+  
   useEffect(() => {
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.url) {
+          setImagePath(message.url);
+          (async() => {
+            setIsLoading(true);
+            try {
+              const chatCompletion = await groq.chat.completions.create({
+                "messages": [
+                  {
+                    "role": "user",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Explain the meaning of what is in this image in simple terms as a teacher would do. Translate it into very basic English suitable for someone below B1 proficiency level. Only provide the answer without additional context or introductory phrases."
+                      },
+                      {
+                        "type": "image_url",
+                        "image_url": {
+                          "url": message.url
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "model": "llama-3.2-11b-vision-preview",
+                "temperature": 1,
+                "max_tokens": 1024,
+                "top_p": 1,
+                "stream": false,
+                "stop": null
+              });
+              const response = chatCompletion.choices[0].message.content as string;
+              setResultSimple(markdownToPlainText(response));
+              (async() => { await fetch(`http://localhost:8080/technology?text=${encodeURIComponent(response)}`, {method: 'POST'}) })()
+            
+            } catch (error) {
+              console.error("Error:", error);
+            }
+            finally {
+              setIsLoading(false);
+            }
+          })()
+        }
+    });
+
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tabId = tabs[0].id as number;
 
@@ -53,7 +109,7 @@ const App: React.FC = () => {
           messages: [
             {
               role: "user",
-              content: `Explain the meaning of "${text}" in simple terms. Translate it into basic English suitable for someone below B1 proficiency level. Only provide the answer without additional context or introductory phrases.`,
+              content: `Explain the meaning of "${text}" in simple terms. Translate it into basic English suitable for someone below A2 proficiency level. Only provide the answer without additional context or introductory phrases.`,
             },
           ],
           model: "llama3-70b-8192",
@@ -206,13 +262,14 @@ const App: React.FC = () => {
           messages: [
             {
               role: "user",
-              content: `Explain the meaning of "${transcriptionResult.text}" in simple terms. Translate it into basic English suitable for someone below B1 proficiency level. Only provide the answer without additional context or introductory phrases. Note that its video transcription where accents can often be misleading try to be creative in case of any ambiguity. Feel free to correct mistakes in the transcription. For example technology names or any other jargon. Eliminate any unnecessary words like Here's an explanation and stuff.`,
+              content: `Explain the meaning of "${transcriptionResult.text}" in simple terms. Translate it into basic English suitable for someone below A2 proficiency level. Only provide the answer without additional context or introductory phrases. Note that its video transcription where accents can often be misleading try to be creative in case of any ambiguity. Feel free to correct mistakes in the transcription. For example technology names or any other jargon. Eliminate any unnecessary words like Here's an explanation and stuff.`,
             },
           ],
           model: "llama3-70b-8192",
         });
         const response = transcriptions.choices[0].message.content as string;
         setResultSimple(response);
+        (async() => { await fetch(`http://localhost:8080/technology?text=${encodeURIComponent(response)}`, {method: 'POST'}) })()
       }
     } catch (error) {
       console.error("Error transcribing audio:", error);
@@ -231,7 +288,7 @@ const App: React.FC = () => {
           isLoading ? "opacity-50" : "opacity-100"
         )}>
           <CardContent className="pt-6">
-            {simplifiedText ? (
+            {( simplifiedText) ? (
               <p className="text-[15px] leading-relaxed">{simplifiedText}</p>
             ) : (
               <div className="flex items-center justify-center py-8">
