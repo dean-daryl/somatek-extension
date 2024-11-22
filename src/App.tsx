@@ -12,7 +12,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
-
+  const [videoSource, setVideoSource] = useState("");
   const [_imagePath, setImagePath] = useState("")
 
 
@@ -66,7 +66,20 @@ const App: React.FC = () => {
               const response = chatCompletion.choices[0].message.content as string;
               setResultSimple(markdownToPlainText(response));
               (async() => { await fetch(`http://localhost:8080/technology?text=${encodeURIComponent(response)}`, {method: 'POST'}) })()
-            
+              
+              await fetch(`http://localhost:8080/recent-activity`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userId: "2ec00c00-3d0a-4124-9060-69847a6287ca", 
+                  conversation: {
+                    "prompt 1": message.url, 
+                    "response 1": response, 
+                  }
+                })
+              });
             } catch (error) {
               console.error("Error:", error);
             }
@@ -119,6 +132,19 @@ const App: React.FC = () => {
         await fetch(`http://localhost:8080/technology?text=${encodeURIComponent(text)}`, {
           method: 'POST',
         });
+        await fetch(`http://localhost:8080/recent-activity`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: "2ec00c00-3d0a-4124-9060-69847a6287ca", 
+            conversation: {
+              "prompt 1": text, 
+              "response 1": response, 
+            }
+          })
+        });
       } catch (error) {
         console.error("Error:", error);
       } finally {
@@ -136,9 +162,8 @@ const App: React.FC = () => {
             const videos = window.document.getElementsByTagName("video");
             const videoElement = videos[0];
             const title = window.getSelection()?.toString();
-
             if (videoElement && (!title || title.length < 1)) {
-              return { src: videoElement.src, duration: videoElement.duration };
+              return { src: videoElement.src, duration: videoElement.duration, currentSrc: videoElement.currentSrc};
             }
             return null;
           },
@@ -153,6 +178,8 @@ const App: React.FC = () => {
             const videoData = injectionResults[0].result;
             if (videoData && text.length < 1) {
               setVideoDuration(videoData.duration);
+              setVideoSource(videoData.currentSrc);
+              console.log(videoSource);
               setShowModal(true);
             }
           }
@@ -171,12 +198,12 @@ const App: React.FC = () => {
     try {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const tabId = tabs[0].id as number;
-
         chrome.scripting.executeScript(
           {
             target: { tabId },
             func: (startTime, endTime) => {
               const videoElement = document.getElementsByTagName("video")[0];
+
               if (videoElement) {
                 videoElement.currentTime = startTime;
                 videoElement.play();
@@ -269,7 +296,42 @@ const App: React.FC = () => {
         });
         const response = transcriptions.choices[0].message.content as string;
         setResultSimple(response);
-        (async() => { await fetch(`http://localhost:8080/technology?text=${encodeURIComponent(response)}`, {method: 'POST'}) })()
+
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+
+          const tabUrl = tabs[0].url as string;
+          const match = tabUrl.match(/[?&]v=([^&]+)/);
+          const videoId = match ? match[1] : null;
+
+          (async() => { 
+            await fetch(`http://localhost:8080/technology?text=${encodeURIComponent(response)}`, {method: 'POST'})
+  
+            await fetch(`http://localhost:8080/recent-activity`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userId: "2ec00c00-3d0a-4124-9060-69847a6287ca", 
+                  conversation: {
+                    "prompt 1": `<iframe 
+                                  src="https://www.youtube.com/embed/${videoId}"
+                                  width="560" 
+                                  height="315" 
+                                  frameborder="0" 
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                  allowfullscreen
+                                ></iframe>`, 
+                    "response 1": response, 
+                  }
+                })
+              });
+            
+          })()
+        });
+
+        
+       
       }
     } catch (error) {
       console.error("Error transcribing audio:", error);
