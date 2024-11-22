@@ -71,6 +71,7 @@ const App: React.FC = () => {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
+                  "title":`${response}`
                 },
                 body: JSON.stringify({
                   userId: "2ec00c00-3d0a-4124-9060-69847a6287ca", 
@@ -310,6 +311,7 @@ const App: React.FC = () => {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
+                  "title":`${transcriptionResult.text}`
                 },
                 body: JSON.stringify({
                   userId: "2ec00c00-3d0a-4124-9060-69847a6287ca", 
