@@ -42,4 +42,4 @@ This is a browser extension built with Vite and JavaScript. The extension helps 
 
 - The extension is now loaded and ready to use.
 
-Go ahead and select text and then click on the extension, or left-click on an image to have it explained. In case of a video just click on the extension and you'll get a timestamp selection popup and proceed to select timestamps and transcribe the video.
+After setting your Groq API Key from https://console.groq.com/keys in the environment variables. Go ahead and select text and then click on the extension, or left-click on an image to have it explained. In case of a video just click on the extension and you'll get a timestamp selection popup and proceed to select timestamps and transcribe the video.
